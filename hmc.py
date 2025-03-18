@@ -4,6 +4,7 @@ import torch.nn.init as init
 from tqdm import tqdm
 import numpy as np
 
+
 # Fonction pour initialiser le modèle suivant le prior
 def initialize_weights(model, mean=0.0, std=1):
     for param in model.parameters():

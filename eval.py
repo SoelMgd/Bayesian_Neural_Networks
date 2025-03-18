@@ -5,12 +5,6 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from hmc import bma_inference, set_model_params
 
-# Fonction pour mettre à jour les paramètres du modèle
-#def set_model_params(model, theta):
-#    with torch.no_grad():
-#        for param, new_param in zip(model.parameters(), theta):
-#            param.copy_(new_param)
-
 
 def evaluate_model(model, test_loader, samples, device="cuda", n_classes=10, verbose=False):
     """

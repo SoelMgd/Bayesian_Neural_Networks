@@ -65,7 +65,6 @@ class BasicBlock(nn.Module):
         
         return out
 
-
 class ResNet(nn.Module):
     def __init__(self, output_dim=10):
         super(ResNet, self).__init__()
