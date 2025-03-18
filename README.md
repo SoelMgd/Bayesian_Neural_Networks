@@ -1,4 +1,4 @@
-# Bayesian Neural Network Posterior Analysis with HMC
+# Bayesian Neural Networks Analysis with HMC
 
 This project replicates and extends the work of [Wenzel et al. (2020)](https://arxiv.org/abs/2002.03285) on Bayesian Neural Networks (BNN) using Hamiltonian Monte Carlo (HMC) for posterior inference. We aim to assess the performance and convergence properties of HMC applied to deep learning models.
 
