@@ -7,4 +7,9 @@ This project replicates and extends the work of [Wenzel et al. (2020)](https://a
 - Implementation of HMC for Bayesian inference in neural networks.
 - Experiments on MNIST dataset, posterior temperature, prior variance, chains mixing etc.
 
+## Code structure:
+- models.py pytorch models used
+- hmc.py HMC sampling functions
+- eval.py Evaluating and vizualizing functions
+
 
