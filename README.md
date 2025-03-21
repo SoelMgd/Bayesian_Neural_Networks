@@ -27,3 +27,4 @@ Basic requirements are needed to make it run, decent versions of : pytorch, nump
 Code can work on GPU and is much faster but can lead to CUDA memory errors for to many leapfrog steps.
 It works on CPU but is much slower.
 
+
