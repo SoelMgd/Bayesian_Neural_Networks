@@ -12,13 +12,29 @@ def initialize_weights(model, mean=0.0, std=1):
             init.normal_(param, mean=mean, std=std)
 
 # Fonction pour mettre à jour les paramètres du modèle
-def set_model_params(model, theta):
+def set_model_params(model, theta, device='cpu'):
+    #theta=theta.to(device)
     with torch.no_grad():
         for param, new_param in zip(model.parameters(), theta):
             param.copy_(new_param)
 
+def flatten_params(params):
+    """Concatène tous les poids du modèle en un seul vecteur."""
+    return torch.cat([p.view(-1) for p in params])
+
+def unflatten_params(flat_params, model):
+    """Reconvertit un vecteur aplati en une liste de tenseurs avec les formes d'origine."""
+    param_shapes = [p.shape for p in model.parameters()]
+    params = []
+    index = 0
+    for shape in param_shapes:
+        numel = torch.prod(torch.tensor(shape))  # Nombre d'éléments
+        params.append(flat_params[index:index + numel].view(shape))
+        index += numel
+    return params
+
 # Fonction de log-probabilité avec prior gaussien
-def log_prob_func(model, data, target, prior_std=1.0, temperature=1.):
+def log_prob_func(model, data, target, prior_std=1.0, temperature=1.): 
     logits = model(data)
     log_likelihood = -F.cross_entropy(logits, target, reduction='sum')
     prior = -0.5 * sum(torch.sum(p ** 2) for p in model.parameters()) / (prior_std ** 2)
@@ -31,11 +47,11 @@ def compute_gradients(model, data, target, temperature=1.):
     return grads
 
 # Implémentation de Leapfrog
-def leapfrog(theta, r, step_size, num_steps, model, data, target, temperature=1.):
+def leapfrog(theta, r, step_size, num_steps, model, data, target, temperature=1., device='cpu'):
     theta = [p.clone().detach().requires_grad_(True) for p in theta]
     r = [ri.clone().detach() for ri in r]
 
-    set_model_params(model, theta)
+    set_model_params(model, theta, device)
     grad = compute_gradients(model, data, target, temperature=temperature)
 
     for i in range(len(r)):
@@ -45,13 +61,13 @@ def leapfrog(theta, r, step_size, num_steps, model, data, target, temperature=1.
         for i in range(len(theta)):
             theta[i] = theta[i] + step_size * r[i]
 
-        set_model_params(model, theta)
+        set_model_params(model, theta, device)
         grad = compute_gradients(model, data, target, temperature=temperature)
 
         for i in range(len(r)):
             r[i] = r[i] + step_size * grad[i]
 
-    set_model_params(model, theta)
+    set_model_params(model, theta, device)
     grad = compute_gradients(model, data, target, temperature=temperature)
 
     for i in range(len(r)):
@@ -61,10 +77,10 @@ def leapfrog(theta, r, step_size, num_steps, model, data, target, temperature=1.
 
 # Fonction d'acceptation Metropolis-Hastings
 def acceptance(theta, r, new_theta, new_r, model, data, target, device):
-    set_model_params(model, theta)
+    set_model_params(model, theta, device)
     current_H = -log_prob_func(model, data, target) + 0.5 * sum(torch.sum(ri**2) for ri in r)
 
-    set_model_params(model, new_theta)
+    set_model_params(model, new_theta, device)
     proposed_H = -log_prob_func(model, data, target) + 0.5 * sum(torch.sum(ri**2) for ri in new_r)
 
     accept_prob = torch.exp(current_H - proposed_H)
@@ -75,7 +91,7 @@ def acceptance(theta, r, new_theta, new_r, model, data, target, device):
     else:
         return theta, 0
 
-def HMC_sampling(device, model, theta, train_loader, step_size, num_steps, n_burnin, n_samples, temperature=1.):
+def HMC_sampling(model, theta, train_loader, step_size, num_steps, n_burnin, n_samples, temperature=1., device='cpu'):
     samples, num_acceptations = [], 0
     
     # Burnin phase
@@ -83,15 +99,15 @@ def HMC_sampling(device, model, theta, train_loader, step_size, num_steps, n_bur
         r = [torch.randn_like(p).to(device) for p in theta]  # momentum
         data, target = next(iter(train_loader))
         data, target = data.to(device), target.to(device)  
-        theta, r = leapfrog(theta, r, step_size, num_steps, model, data, target, temperature=temperature) # leapfrog
-
+        theta, r = leapfrog(theta, r, step_size, num_steps, model, data, target, temperature=temperature, device=device) # leapfrog
+        
     # Sampling phase
     for _ in tqdm(range(n_samples), desc="Sampling phase"):
         r = [torch.randn_like(p).to(device) for p in theta]  # momentum
         data, target = next(iter(train_loader))
         data, target = data.to(device), target.to(device) 
     
-        new_theta, new_r = leapfrog(theta, r, step_size, num_steps, model, data, target, temperature=temperature) # leapfrog
+        new_theta, new_r = leapfrog(theta, r, step_size, num_steps, model, data, target, temperature=temperature, device=device) # leapfrog
         
         theta, acceptation = acceptance(theta, r, new_theta, new_r, model, data, target, device)
         num_acceptations += acceptation
@@ -173,7 +189,7 @@ def sample_multiple_chains(model, device, train_loader, num_chains=3, n_samples=
         theta = [p.clone().detach().to(device) for p in model.parameters()]
 
         # Exécuter HMC pour obtenir des échantillons
-        samples = HMC_sampling(device, model, theta, train_loader, step_size, n_leapfrog, n_burnin, n_samples)
+        samples = HMC_sampling(model, theta, train_loader, step_size, n_leapfrog, n_burnin, n_samples, device=device)
 
         # Transformer en un tenseur (N, D) et envoyer sur CPU
         chain_tensor = flatten_chain(samples).cpu()
@@ -211,7 +227,7 @@ def get_function_space_samples(model, test_loader, samples_weight, device="cuda"
         chain_predictions = []
         for n in range(N):
             # Charger les poids dans le modèle à partir de samples_weight en utilisant set_model_params
-            set_model_params(model, samples_weight[m, n].cpu())  # Déplacer sur CPU pour éviter d'utiliser la mémoire GPU
+            set_model_params(model, samples_weight[m, n].cpu(), device)  # Déplacer sur CPU pour éviter d'utiliser la mémoire GPU
 
             # Propager un batch de test à travers le modèle
             model.eval()  # Mettre le modèle en mode évaluation pour désactiver les effets de dropout, batchnorm, etc.
