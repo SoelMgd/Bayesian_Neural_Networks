@@ -1,9 +1,8 @@
 import torch
-import numpy as np
 import torch.nn.functional as F
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from hmc import bma_inference, set_model_params, flatten_params, unflatten_params
+from src.hmc import bma_inference, set_model_params, flatten_params, unflatten_params
 
 
 def evaluate_models(model, test_loader, samples, device="cuda", n_classes=10, prior_std=1, verbose=False):
