@@ -17,10 +17,10 @@ This project replicates and extends the work of [Wenzel et al. (2020)](https://a
 
 
 ## Requirements
-Basic requirements are needed to make it run, decent versions of : pytorch, numpy, matplotlib, tqdm in your python environment should work
-You can use our version with pip install -r requirements.txt
+Basic requirements are needed to make it run, decent versions of : pytorch, numpy, matplotlib, tqdm in your python environment should work.
+You can use our version with **pip install -r requirements.txt**.
 
 
 ## Caution
-Code can work on GPU and is much faster but can lead to CUDA memory errors for to many leapfrog steps.
-It works on CPU but is much slower.
+Code is much faster on GPU but can lead to CUDA memory errors for to many leapfrog steps.
+Working fine but much slower on CPU.
