@@ -1,0 +1,5 @@
+torch==2.6.0+cpu
+numpy==2.1.2
+matplotlib==3.9.2
+torchvision==0.21.0+cpu
+tqdm==4.67.0
